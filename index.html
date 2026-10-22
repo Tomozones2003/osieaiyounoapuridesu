@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>教え合いサポートボード</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        /* 基本的なリセットとアニメーションの補助 */
+        body { font-family: 'Inter', sans-serif; }
+        .hidden-screen { display: none !important; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="min-h-screen flex items-center justify-center bg-gray-50">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+    </div>
+
+    <!-- Role Selection Screen -->
+    <div id="role-screen" class="hidden-screen min-h-screen flex flex-col items-center justify-center p-4">
+        <h1 class="text-3xl font-bold text-slate-800 mb-8 flex items-center gap-3">
+            <i class="ph-fill ph-users text-4xl text-blue-600"></i>
+            教え合いサポートボード
+        </h1>
+        <div class="flex flex-col sm:flex-row gap-6 w-full max-w-2xl">
+            <button id="btn-role-teacher" class="flex-1 bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all flex flex-col items-center gap-4 group">
+                <div class="p-4 bg-blue-50 rounded-full group-hover:bg-blue-100 transition-colors">
+                    <i class="ph-fill ph-monitor-play text-5xl text-blue-600"></i>
+                </div>
+                <div class="text-xl font-bold text-slate-700">プロジェクター用</div>
+                <p class="text-slate-500 text-sm text-center">先生が電子黒板やプロジェクターに映す画面です</p>
+            </button>
+
+            <button id="btn-role-student" class="flex-1 bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:border-emerald-400 hover:shadow-md transition-all flex flex-col items-center gap-4 group">
+                <div class="p-4 bg-emerald-50 rounded-full group-hover:bg-emerald-100 transition-colors">
+                    <i class="ph-fill ph-user text-5xl text-emerald-600"></i>
+                </div>
+                <div class="text-xl font-bold text-slate-700">スマホ用（生徒）</div>
+                <p class="text-slate-500 text-sm text-center">生徒が自分の進捗を報告する画面です</p>
+            </button>
+        </div>
+    </div>
+
+    <!-- Student Login Screen -->
+    <div id="student-login-screen" class="hidden-screen min-h-screen flex flex-col items-center justify-center p-4">
+        <button onclick="appState.setRole(null)" class="absolute top-4 left-4 p-2 text-slate-500 hover:bg-slate-200 rounded-full transition-colors">
+            <i class="ph ph-arrow-left text-2xl"></i>
+        </button>
+        <div class="bg-white p-8 rounded-2xl shadow-md w-full max-w-md fade-in">
+            <h2 class="text-2xl font-bold text-center mb-6 text-slate-800">あなたの名前</h2>
+            <form id="login-form" class="flex flex-col gap-4">
+                <input
+                    type="text"
+                    id="student-name-input"
+                    placeholder="例：山田 太郎"
+                    class="w-full px-4 py-3 text-lg rounded-xl border-2 border-slate-200 focus:border-emerald-500 focus:outline-none transition-colors"
+                    required
+                />
+                <button
+                    type="submit"
+                    id="login-submit-btn"
+                    class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-xl text-lg transition-colors disabled:opacity-50"
+                >
+                    はじめる
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Student Dashboard Screen -->
+    <div id="student-dashboard-screen" class="hidden-screen min-h-screen p-4 pb-10">
+        <div class="max-w-md mx-auto fade-in">
+            <header class="flex items-center justify-between mb-8 bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                <span id="display-student-name" class="font-bold text-slate-700"></span>
+                <span id="display-solved-count" class="text-sm bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full font-medium">
+                    クリア: 0/10
+                </span>
+            </header>
+
+            <h2 class="text-xl font-bold text-center text-slate-700 mb-6">終わった問題を押そう！</h2>
+            
+            <div id="student-problems-grid" class="grid grid-cols-2 gap-4">
+                <!-- Buttons will be generated here by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Teacher Dashboard Screen -->
+    <div id="teacher-dashboard-screen" class="hidden-screen min-h-screen bg-slate-900 text-slate-100 p-6 flex flex-col">
+        <header class="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
+            <div class="flex items-center gap-4">
+                <button onclick="appState.setRole(null)" class="p-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full transition-colors">
+                    <i class="ph ph-arrow-left text-2xl"></i>
+                </button>
+                <h1 class="text-3xl font-bold flex items-center gap-3">
+                    <i class="ph-fill ph-users text-4xl text-blue-400"></i>
+                    みんなの進捗ボード
+                </h1>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <span id="teacher-participant-count" class="text-slate-400">参加者: 0名</span>
+                <button 
+                    id="btn-clear-data"
+                    class="flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 px-4 py-2 rounded-lg transition-colors border border-red-500/20"
+                >
+                    <i class="ph ph-trash"></i>
+                    リセット
+                </button>
+            </div>
+        </header>
+
+        <div id="teacher-problems-grid" class="flex-1 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <!-- Cards will be generated here by JS -->
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase Configuration (from environment)
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Application State
+        window.appState = {
+            user: null,
+            role: null, // 'teacher' | 'student' | null
+            studentName: '',
+            isNameSet: false,
+            studentsData: [],
+            numProblems: 10,
+            unsubscribeSnapshot: null,
+
+            setRole(newRole) {
+                this.role = newRole;
+                // Reset student flow if going back
+                if (!newRole) {
+                    this.isNameSet = false;
+                    this.studentName = '';
+                    document.getElementById('student-name-input').value = '';
+                }
+                updateUI();
+            },
+            
+            async setStudentName(name) {
+                this.studentName = name;
+                this.isNameSet = true;
+                updateUI();
+
+                if (this.user) {
+                    const studentRef = doc(db, 'artifacts', appId, 'public', 'data', 'progress', this.user.uid);
+                    await setDoc(studentRef, {
+                        name: this.studentName,
+                        solved: []
+                    }, { merge: true });
+                }
+            },
+
+            async toggleProblem(problemNumber) {
+                if (!this.user || !this.isNameSet) return;
+                
+                const myData = this.studentsData.find(d => d.id === this.user.uid);
+                const currentSolved = myData?.solved || [];
+                
+                let newSolved;
+                if (currentSolved.includes(problemNumber)) {
+                    newSolved = currentSolved.filter(n => n !== problemNumber);
+                } else {
+                    newSolved = [...currentSolved, problemNumber].sort((a,b) => a - b);
+                }
+
+                const studentRef = doc(db, 'artifacts', appId, 'public', 'data', 'progress', this.user.uid);
+                await setDoc(studentRef, { solved: newSolved }, { merge: true });
+            },
+
+            async clearAllData() {
+                if (!this.user) return;
+                try {
+                    const progressRef = collection(db, 'artifacts', appId, 'public', 'data', 'progress');
+                    const snapshot = await getDocs(progressRef);
+                    const deletePromises = snapshot.docs.map(document => 
+                        deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'progress', document.id))
+                    );
+                    await Promise.all(deletePromises);
+                } catch (error) {
+                    console.error("Error clearing data:", error);
+                }
+            }
+        };
+
+        // UI Management
+        const screens = {
+            loading: document.getElementById('loading-screen'),
+            role: document.getElementById('role-screen'),
+            login: document.getElementById('student-login-screen'),
+            studentDash: document.getElementById('student-dashboard-screen'),
+            teacherDash: document.getElementById('teacher-dashboard-screen')
+        };
+
+        function hideAllScreens() {
+            Object.values(screens).forEach(screen => screen.classList.add('hidden-screen'));
+        }
+
+        function updateUI() {
+            hideAllScreens();
+
+            if (!appState.user) {
+                screens.loading.classList.remove('hidden-screen');
+                return;
+            }
+
+            if (!appState.role) {
+                screens.role.classList.remove('hidden-screen');
+            } else if (appState.role === 'student') {
+                if (!appState.isNameSet) {
+                    screens.login.classList.remove('hidden-screen');
+                    document.getElementById('student-name-input').focus();
+                } else {
+                    screens.studentDash.classList.remove('hidden-screen');
+                    renderStudentDashboard();
+                }
+            } else if (appState.role === 'teacher') {
+                screens.teacherDash.classList.remove('hidden-screen');
+                renderTeacherDashboard();
+            }
+        }
+
+        function renderStudentDashboard() {
+            const myData = appState.studentsData.find(d => d.id === appState.user?.uid);
+            const mySolved = myData?.solved || [];
+
+            document.getElementById('display-student-name').textContent = `${appState.studentName} さん`;
+            document.getElementById('display-solved-count').textContent = `クリア: ${mySolved.length}/${appState.numProblems}`;
+
+            const grid = document.getElementById('student-problems-grid');
+            grid.innerHTML = '';
+
+            for (let i = 1; i <= appState.numProblems; i++) {
+                const isSolved = mySolved.includes(i);
+                
+                const btn = document.createElement('button');
+                btn.className = `flex flex-col items-center justify-center p-6 rounded-2xl shadow-sm border-2 transition-all duration-200 active:scale-95 ${
+                    isSolved 
+                    ? 'bg-emerald-50 border-emerald-500 text-emerald-700' 
+                    : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
+                }`;
+                btn.onclick = () => appState.toggleProblem(i);
+
+                const numSpan = document.createElement('span');
+                numSpan.className = 'text-2xl font-bold mb-2';
+                numSpan.textContent = `(${i})`;
+
+                const statusDiv = document.createElement('div');
+                statusDiv.className = `flex items-center gap-1 ${isSolved ? '' : 'opacity-60'}`;
+                
+                if (isSolved) {
+                    statusDiv.innerHTML = `<i class="ph-fill ph-check-circle text-xl text-emerald-500"></i><span class="font-bold">解けた！</span>`;
+                } else {
+                    statusDiv.innerHTML = `<i class="ph ph-circle text-xl"></i><span>まだ</span>`;
+                }
+
+                btn.appendChild(numSpan);
+                btn.appendChild(statusDiv);
+                grid.appendChild(btn);
+            }
+        }
+
+        function renderTeacherDashboard() {
+            document.getElementById('teacher-participant-count').textContent = `参加者: ${appState.studentsData.length}名`;
+            
+            const grid = document.getElementById('teacher-problems-grid');
+            grid.innerHTML = '';
+
+            for (let i = 1; i <= appState.numProblems; i++) {
+                const solvers = appState.studentsData.filter(student => student.solved?.includes(i));
+                
+                const card = document.createElement('div');
+                card.className = 'bg-slate-800 border border-slate-700 rounded-2xl p-6 flex flex-col shadow-xl fade-in';
+                
+                const header = document.createElement('div');
+                header.className = 'flex items-center justify-between border-b border-slate-700 pb-4 mb-4';
+                header.innerHTML = `
+                    <h2 class="text-3xl font-bold text-white">問題 (${i})</h2>
+                    <span class="bg-blue-500/20 text-blue-300 px-4 py-1 rounded-full text-xl font-bold">
+                        ${solvers.length}人
+                    </span>
+                `;
+
+                const content = document.createElement('div');
+                content.className = 'flex-1 flex flex-wrap gap-3 content-start';
+
+                if (solvers.length > 0) {
+                    solvers.forEach(solver => {
+                        const nameTag = document.createElement('div');
+                        nameTag.className = 'bg-slate-700 text-white px-4 py-2 rounded-lg text-xl font-medium border border-slate-600 shadow-sm fade-in';
+                        nameTag.textContent = solver.name;
+                        content.appendChild(nameTag);
+                    });
+                } else {
+                    const emptyState = document.createElement('div');
+                    emptyState.className = 'text-slate-500 text-lg w-full text-center py-8';
+                    emptyState.textContent = 'まだ解けた人はいません';
+                    content.appendChild(emptyState);
+                }
+
+                card.appendChild(header);
+                card.appendChild(content);
+                grid.appendChild(card);
+            }
+        }
+
+        // Event Listeners setup
+        document.getElementById('btn-role-teacher').addEventListener('click', () => appState.setRole('teacher'));
+        document.getElementById('btn-role-student').addEventListener('click', () => appState.setRole('student'));
+        
+        document.getElementById('login-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('student-name-input').value.trim();
+            if (name) {
+                appState.setStudentName(name);
+            }
+        });
+
+        document.getElementById('student-name-input').addEventListener('input', (e) => {
+            document.getElementById('login-submit-btn').disabled = !e.target.value.trim();
+        });
+
+        document.getElementById('btn-clear-data').addEventListener('click', () => {
+            // alert/confirmは禁止されているため、直接リセット処理を走らせる
+            appState.clearAllData();
+        });
+
+        // Initialize Firebase Auth
+        async function initAuth() {
+            try {
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Auth error:", error);
+            }
+        }
+
+        // Start App
+        initAuth();
+
+        onAuthStateChanged(auth, (user) => {
+            appState.user = user;
+            updateUI();
+
+            if (user) {
+                // Setup Firestore listener
+                const progressRef = collection(db, 'artifacts', appId, 'public', 'data', 'progress');
+                
+                if (appState.unsubscribeSnapshot) {
+                    appState.unsubscribeSnapshot();
+                }
+
+                appState.unsubscribeSnapshot = onSnapshot(
+                    progressRef,
+                    (snapshot) => {
+                        const data = [];
+                        snapshot.forEach((doc) => {
+                            data.push({ id: doc.id, ...doc.data() });
+                        });
+                        appState.studentsData = data;
+                        
+                        // If already on a dashboard, update it seamlessly
+                        if (appState.role === 'student' && appState.isNameSet) {
+                            renderStudentDashboard();
+                        } else if (appState.role === 'teacher') {
+                            renderTeacherDashboard();
+                        }
+                    },
+                    (error) => {
+                        console.error("Error fetching progress:", error);
+                    }
+                );
+            }
+        });
+
+    </script>
+</body>
+</html>
